@@ -42,6 +42,7 @@ export class Bot {
     this.router = new CommandRouter(
       buildBuiltins({ polls: this.polls, moderator: this.moderator, activePoll: this.activePoll, save: () => this.store.save(this.store.get()) }),
     );
+    this.onOutgoing(t => { void this.chat?.say(t); });
   }
 
   onOutgoing(fn: (text: string) => void): void { this.outgoing.push(fn); }
@@ -71,7 +72,6 @@ export class Bot {
     this.chat = new ChatClient(this.store.get().auth);
     this.chat.onMessage(m => { void this.dispatch(m); });
     this.chat.onStatus(s => this.status.forEach(f => f(s)));
-    this.onOutgoing(t => { void this.chat?.say(t); });
     await this.chat.connect();
   }
 
