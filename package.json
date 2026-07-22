@@ -6,7 +6,7 @@
   "main": "dist/app/main.js",
   "scripts": {
     "test": "node --import tsx --test test/**/*.test.ts",
-    "build": "tsc",
+    "build": "tsc && node -e \"const {cpSync}=require('node:fs');cpSync('src/ui','dist/ui',{recursive:true})\"",
     "start:core": "tsx src/core/headless.ts",
     "start": "npm run build && electron .",
     "dist": "npm run build && electron-builder"

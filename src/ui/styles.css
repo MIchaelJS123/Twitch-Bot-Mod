@@ -1,0 +1,13 @@
+body { font-family: system-ui, sans-serif; margin: 0; padding: 1rem; background: #18181b; color: #efeff1; }
+header { display: flex; align-items: center; gap: 1rem; }
+h1 { color: #a970ff; }
+.status { padding: .2rem .6rem; border-radius: 4px; background: #333; }
+section { border: 1px solid #333; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+label { display: block; margin: .5rem 0; }
+input, textarea, select { background: #1f1f23; color: #efeff1; border: 1px solid #444; border-radius: 4px; padding: .4rem; }
+button { background: #a970ff; color: white; border: none; border-radius: 4px; padding: .5rem 1rem; cursor: pointer; margin: .2rem; }
+button:hover { background: #9146ff; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: .3rem; border-bottom: 1px solid #333; }
+.save { position: sticky; bottom: 1rem; font-size: 1.1rem; }
+.hint { color: #999; font-size: .9rem; }

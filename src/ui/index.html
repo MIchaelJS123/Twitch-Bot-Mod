@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf8" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>TwitchBot</title>
+</head>
+<body>
+  <header><h1>TwitchBot</h1><span id="status" class="status">stopped</span></header>
+
+  <section>
+    <h2>Setup</h2>
+    <label>Client ID <input id="clientId" /></label>
+    <label>Client Secret <input id="clientSecret" type="password" /></label>
+    <button id="authorize">Authorize with Twitch</button>
+    <button id="start">Start Bot</button>
+    <button id="stop">Stop Bot</button>
+  </section>
+
+  <section>
+    <h2>Moderation</h2>
+    <label><input type="checkbox" id="modEnabled" /> Enabled</label>
+    <label>Caps % <input id="capsPercent" type="number" /></label>
+    <label>Max links <input id="maxLinks" type="number" /></label>
+    <label>Symbol % <input id="maxSymbolPercent" type="number" /></label>
+    <label>Banned words (comma-separated)<br /><textarea id="bannedWords"></textarea></label>
+  </section>
+
+  <section>
+    <h2>Custom Commands</h2>
+    <table id="cmdTable"><thead><tr><th>Trigger</th><th>Response</th><th>Type</th><th></th></tr></thead><tbody></tbody></table>
+    <div>
+      <input id="cTrigger" placeholder="!hello" />
+      <input id="cResponse" placeholder="hi {user}" />
+      <select id="cType"><option value="text">text</option><option value="counter">counter</option></select>
+      <button id="addCmd">Add</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Poll (native)</h2>
+    <input id="pollTitle" placeholder="Question" />
+    <input id="pollChoices" placeholder="Choice A | Choice B | Choice C" />
+    <input id="pollDuration" type="number" value="120" />
+    <button id="startPoll">Start Poll</button>
+    <p class="hint">Polls also start from chat: <code>!poll Question | A | B</code></p>
+  </section>
+
+  <button id="save" class="save">Save Settings</button>
+  <script src="app.js"></script>
+</body>
+</html>
