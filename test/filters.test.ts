@@ -55,3 +55,26 @@ test('violation carries the default action', () => {
   assert.equal(v.ok, false);
   if (!v.ok) assert.deepEqual(v.action, { type: 'ban' });
 });
+
+test('excessive symbols caught above threshold', () => {
+  const cfg = mod(); cfg.maxSymbolPercent = 50;
+  const v = moderate(msg('@#$%^&*!!!! ~~~~'), cfg);
+  assert.equal(v.ok, false);
+});
+
+test('normal text is not symbol spam', () => {
+  const cfg = mod(); cfg.maxSymbolPercent = 50;
+  assert.deepEqual(moderate(msg('hello there friends'), cfg), { ok: true });
+});
+
+test('maxSymbolPercent 0 disables symbol filter', () => {
+  const cfg = mod(); cfg.maxSymbolPercent = 0;
+  assert.deepEqual(moderate(msg('@#$%^&*~~~~####'), cfg), { ok: true });
+});
+
+test('first matching filter wins (banned word before caps)', () => {
+  const cfg = mod(); cfg.bannedWords = ['stop']; cfg.capsPercent = 70; cfg.capsMinLength = 5;
+  const v = moderate(msg('STOP SHOUTING NOW'), cfg);
+  assert.equal(v.ok, false);
+  if (!v.ok) assert.match(v.reason, /banned word/);
+});
