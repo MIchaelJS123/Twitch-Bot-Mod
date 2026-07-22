@@ -41,8 +41,15 @@ function beginAuth(): Promise<{ ok: boolean; error?: string }> {
     if (!auth.clientId || !auth.clientSecret) { resolve({ ok: false, error: 'Enter client ID and secret first.' }); return; }
     const server = createServer(async (req, res) => {
       const url = new URL(req.url!, REDIRECT);
+      if (url.pathname !== '/callback') { res.statusCode = 204; res.end(); return; }
       const code = url.searchParams.get('code');
-      if (!code) { res.end('Missing code'); return; }
+      if (!code) {
+        const error = url.searchParams.get('error_description') ?? url.searchParams.get('error') ?? 'Missing code';
+        res.end('Authorization was cancelled or failed. You can close this tab.');
+        server.close();
+        resolve({ ok: false, error });
+        return;
+      }
       try {
         const t = await exchangeCode(auth.clientId, auth.clientSecret, code, REDIRECT);
         const v = await validate(t.accessToken);
@@ -58,6 +65,7 @@ function beginAuth(): Promise<{ ok: boolean; error?: string }> {
         resolve({ ok: false, error: (e as Error).message });
       }
     });
+    server.on('error', err => resolve({ ok: false, error: (err as Error).message }));
     server.listen(5123, () => shell.openExternal(authorizeUrl(auth.clientId, REDIRECT)));
   });
 }
@@ -73,7 +81,7 @@ ipcMain.handle('bot:start', async () => {
     return { ok: true };
   } catch (e) { return { ok: false, error: (e as Error).message }; }
 });
-ipcMain.handle('bot:stop', async () => { await bot?.stop(); bot = null; });
+ipcMain.handle('bot:stop', async () => { try { await bot?.stop(); } finally { bot = null; } });
 
 app.whenReady().then(() => {
   app.setLoginItemSettings({ openAtLogin: true }); // start on boot
