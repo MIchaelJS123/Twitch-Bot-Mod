@@ -30,7 +30,7 @@ export class HelixClient {
     if (res.status === 401 && retry && (await this.tp.onUnauthorized())) {
       return this.request(url, init, false);
     }
-    if (!res.ok && res.status !== 401) {
+    if (!res.ok) {
       throw new Error(`Helix ${res.status}: ${await res.text()}`);
     }
     return res;

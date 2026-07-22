@@ -61,3 +61,19 @@ test('401 triggers onUnauthorized and retries once', async () => {
   assert.equal(refreshed, true);
   assert.equal(call, 2);
 });
+
+test('unrecoverable 401 (no refresh) throws', async () => {
+  const tp = { ...fakeTp(), onUnauthorized: async () => false };
+  const r = recorder(401, { error: 'Unauthorized', status: 401, message: 'invalid token' });
+  const h = new HelixClient(tp, r.impl);
+  await assert.rejects(() => h.banUser('42'), /Helix 401/);
+});
+
+test('second 401 after a refresh still throws', async () => {
+  let refreshed = false;
+  const tp = { ...fakeTp(), onUnauthorized: async () => { refreshed = true; return true; } };
+  const r = recorder(401, { error: 'Unauthorized' }); // always 401
+  const h = new HelixClient(tp, r.impl);
+  await assert.rejects(() => h.deleteMessage('m1'), /Helix 401/);
+  assert.equal(refreshed, true);
+});
