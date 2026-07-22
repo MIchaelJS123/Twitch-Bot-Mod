@@ -15,9 +15,9 @@ export interface TokenProvider {
 const BASE = 'https://api.twitch.tv/helix';
 
 export class HelixClient {
-  constructor(private tp: TokenProvider, private fetchImpl: typeof fetch = fetch) {}
+  constructor(private tp: TokenProvider, private fetchImpl: typeof fetch = fetch, private retryDelayMs = 300) {}
 
-  private async request(url: string, init: RequestInit = {}, retry = true): Promise<Response> {
+  private async request(url: string, init: RequestInit = {}, auth = true, attempt = 0): Promise<Response> {
     const res = await this.fetchImpl(url, {
       ...init,
       headers: {
@@ -27,8 +27,12 @@ export class HelixClient {
         ...(init.headers ?? {}),
       },
     });
-    if (res.status === 401 && retry && (await this.tp.onUnauthorized())) {
-      return this.request(url, init, false);
+    if (res.status === 401 && auth && (await this.tp.onUnauthorized())) {
+      return this.request(url, init, false, attempt);
+    }
+    if (res.status >= 500 && attempt < 2) {
+      await new Promise(r => setTimeout(r, this.retryDelayMs * (attempt + 1)));
+      return this.request(url, init, auth, attempt + 1);
     }
     if (!res.ok) {
       throw new Error(`Helix ${res.status}: ${await res.text()}`);

@@ -77,3 +77,19 @@ test('second 401 after a refresh still throws', async () => {
   await assert.rejects(() => h.deleteMessage('m1'), /Helix 401/);
   assert.equal(refreshed, true);
 });
+
+test('5xx is retried then succeeds', async () => {
+  let call = 0;
+  const impl = (async () => { call++; return new Response('{"data":[{}]}', { status: call === 1 ? 500 : 200 }); }) as unknown as typeof fetch;
+  const h = new HelixClient(fakeTp(), impl, 0);
+  await h.banUser('42');
+  assert.equal(call, 2);
+});
+
+test('persistent 5xx throws after bounded retries', async () => {
+  let call = 0;
+  const impl = (async () => { call++; return new Response('err', { status: 503 }); }) as unknown as typeof fetch;
+  const h = new HelixClient(fakeTp(), impl, 0);
+  await assert.rejects(() => h.banUser('42'), /Helix 503/);
+  assert.equal(call, 3); // initial + 2 retries
+});

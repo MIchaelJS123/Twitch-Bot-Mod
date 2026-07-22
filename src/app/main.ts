@@ -74,6 +74,7 @@ ipcMain.handle('config:get', () => store.get());
 ipcMain.handle('config:save', (_e, c) => { store.save(c); });
 ipcMain.handle('auth:begin', () => beginAuth());
 ipcMain.handle('bot:start', async () => {
+  if (bot) return { ok: true };
   try {
     bot = new Bot(store);
     bot.onStatus(s => win?.webContents.send('bot:status', s));

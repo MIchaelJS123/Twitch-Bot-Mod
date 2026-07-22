@@ -15,8 +15,16 @@ export class ConfigStore {
     }
     try {
       const raw = readFileSync(this.path, 'utf8');
-      // Merge over defaults so new fields added later are present.
-      this.current = { ...defaultConfig(), ...JSON.parse(raw) } as Config;
+      // Merge each section over defaults so fields added in later versions are backfilled,
+      // even inside nested objects (a top-level spread would drop them).
+      const parsed = JSON.parse(raw) as Partial<Config>;
+      const d = defaultConfig();
+      this.current = {
+        auth: { ...d.auth, ...parsed.auth },
+        moderation: { ...d.moderation, ...parsed.moderation },
+        commands: parsed.commands ?? d.commands,
+        polls: { ...d.polls, ...parsed.polls },
+      };
     } catch {
       renameSync(this.path, this.path + '.bak');
       this.current = defaultConfig();

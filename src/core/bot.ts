@@ -8,6 +8,8 @@ import { CommandRouter } from './commands/router.js';
 import { buildBuiltins } from './commands/builtins.js';
 import { refresh, validate } from './auth/oauth.js';
 
+export type BotStatus = 'connected' | 'disconnected' | 'needs-reauth';
+
 export class Bot {
   private helix: HelixClient;
   private moderator: Moderator;
@@ -16,7 +18,7 @@ export class Bot {
   private activePoll = { id: null as string | null };
   private chat: ChatClient | null = null;
   private outgoing: ((text: string) => void)[] = [];
-  private status: ((s: 'connected' | 'disconnected') => void)[] = [];
+  private status: ((s: BotStatus) => void)[] = [];
 
   constructor(private store: ConfigStore) {
     const tp: TokenProvider = {
@@ -46,16 +48,24 @@ export class Bot {
   }
 
   onOutgoing(fn: (text: string) => void): void { this.outgoing.push(fn); }
-  onStatus(fn: (s: 'connected' | 'disconnected') => void): void { this.status.push(fn); }
+  onStatus(fn: (s: BotStatus) => void): void { this.status.push(fn); }
   private emit(text: string): void { for (const fn of this.outgoing) fn(text); }
+  private emitStatus(s: BotStatus): void { for (const f of this.status) f(s); }
 
   async dispatch(msg: ChatMessage): Promise<void> {
     const cfg = this.store.get();
-    const moderated = await this.moderator.handle(msg, cfg.moderation);
-    if (moderated) return;
-    const before = JSON.stringify(cfg.commands);
-    await this.router.route(msg, cfg, t => this.emit(t));
-    if (JSON.stringify(cfg.commands) !== before) this.store.save(cfg); // persist counter changes
+    try {
+      const moderated = await this.moderator.handle(msg, cfg.moderation);
+      if (moderated) return;
+      const before = JSON.stringify(cfg.commands);
+      await this.router.route(msg, cfg, t => this.emit(t));
+      if (JSON.stringify(cfg.commands) !== before) this.store.save(cfg); // persist counter changes
+    } catch (e) {
+      const text = (e as Error).message ?? '';
+      if (/Helix 401/i.test(text) || /unauthor/i.test(text)) this.emitStatus('needs-reauth');
+      // Swallow so a single failed message (transient API error / auth loss) never crashes the bot;
+      // auth loss is surfaced to the UI via the needs-reauth status above.
+    }
   }
 
   async start(): Promise<void> {
