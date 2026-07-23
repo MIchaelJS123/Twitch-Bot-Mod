@@ -93,3 +93,36 @@ test('persistent 5xx throws after bounded retries', async () => {
   await assert.rejects(() => h.banUser('42'), /Helix 503/);
   assert.equal(call, 3); // initial + 2 retries
 });
+
+test('createCustomReward posts title, cost, and requires user input', async () => {
+  const r = recorder(200, { data: [{ id: 'rw1' }] });
+  const h = new HelixClient(fakeTp(), r.impl);
+  const reward = await h.createCustomReward('Ask the Bot', 500, 'Type your question');
+  assert.equal(reward.id, 'rw1');
+  assert.match(r.calls[0].url, /channel_points\/custom_rewards\?broadcaster_id=bid/);
+  const body = JSON.parse(r.calls[0].init.body as string);
+  assert.equal(body.title, 'Ask the Bot');
+  assert.equal(body.cost, 500);
+  assert.equal(body.is_user_input_required, true);
+});
+
+test('updateRedemptionStatus PATCHes the redemption with status', async () => {
+  const r = recorder(200, { data: [{}] });
+  const h = new HelixClient(fakeTp(), r.impl);
+  await h.updateRedemptionStatus('rw1', 'red1', 'FULFILLED');
+  assert.equal(r.calls[0].init.method, 'PATCH');
+  assert.match(r.calls[0].url, /reward_id=rw1/);
+  assert.match(r.calls[0].url, /&id=red1/);
+  assert.equal(JSON.parse(r.calls[0].init.body as string).status, 'FULFILLED');
+});
+
+test('subscribeEventSub posts a websocket-transport subscription', async () => {
+  const r = recorder(200, { data: [{}] });
+  const h = new HelixClient(fakeTp(), r.impl);
+  await h.subscribeEventSub('channel.channel_points_custom_reward_redemption.add', '1', { broadcaster_user_id: 'bid', reward_id: 'rw1' }, 'sess1');
+  const body = JSON.parse(r.calls[0].init.body as string);
+  assert.equal(body.type, 'channel.channel_points_custom_reward_redemption.add');
+  assert.equal(body.transport.method, 'websocket');
+  assert.equal(body.transport.session_id, 'sess1');
+  assert.equal(body.condition.reward_id, 'rw1');
+});

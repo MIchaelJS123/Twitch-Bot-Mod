@@ -78,4 +78,26 @@ export class HelixClient {
     });
     return (await res.json()).data[0];
   }
+
+  async createCustomReward(title: string, cost: number, prompt: string): Promise<{ id: string }> {
+    const url = `${BASE}/channel_points/custom_rewards?broadcaster_id=${this.bid()}`;
+    const res = await this.request(url, {
+      method: 'POST',
+      body: JSON.stringify({ title, cost, prompt, is_user_input_required: true }),
+    });
+    return (await res.json()).data[0];
+  }
+
+  async updateRedemptionStatus(rewardId: string, redemptionId: string, status: 'FULFILLED' | 'CANCELED'): Promise<void> {
+    const url = `${BASE}/channel_points/custom_rewards/redemptions?broadcaster_id=${this.bid()}&reward_id=${rewardId}&id=${redemptionId}`;
+    await this.request(url, { method: 'PATCH', body: JSON.stringify({ status }) });
+  }
+
+  async subscribeEventSub(type: string, version: string, condition: Record<string, string>, sessionId: string): Promise<void> {
+    const url = `${BASE}/eventsub/subscriptions`;
+    await this.request(url, {
+      method: 'POST',
+      body: JSON.stringify({ type, version, condition, transport: { method: 'websocket', session_id: sessionId } }),
+    });
+  }
 }
