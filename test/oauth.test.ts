@@ -20,3 +20,7 @@ test('validate returns login and user id', async () => {
   const v = await validate('tok', impl);
   assert.deepEqual(v, { login: 'streamer', userId: '123' });
 });
+
+test('SCOPES includes channel:manage:redemptions', () => {
+  assert.ok(SCOPES.includes('channel:manage:redemptions'));
+});

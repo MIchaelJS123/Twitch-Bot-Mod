@@ -5,6 +5,7 @@ export const SCOPES = [
   'channel:read:polls',
   'moderator:manage:banned_users',
   'moderator:manage:chat_messages',
+  'channel:manage:redemptions',
 ];
 
 const AUTH = 'https://id.twitch.tv/oauth2';
