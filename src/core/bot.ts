@@ -7,8 +7,24 @@ import { Polls } from './polls/polls.js';
 import { CommandRouter } from './commands/router.js';
 import { buildBuiltins } from './commands/builtins.js';
 import { refresh, validate } from './auth/oauth.js';
+import { makeClient, ask as personaAsk, sanitizeForChat, rephrase as personaRephrase } from './ai/persona.js';
+import { EventSubClient, Redemption } from './connection/eventsub.js';
+import { Timers } from './timers/timers.js';
 
 export type BotStatus = 'connected' | 'disconnected' | 'needs-reauth';
+
+export async function answerRedemption(
+  r: Redemption,
+  deps: { ask: (q: string) => Promise<string>; emit: (t: string) => void; fulfill: () => Promise<void>; refund: () => Promise<void> },
+): Promise<void> {
+  try {
+    deps.emit(await deps.ask(r.userInput));
+    await deps.fulfill();
+  } catch {
+    deps.emit('Sorry, I could not answer that — your points were refunded.');
+    await deps.refund();
+  }
+}
 
 export class Bot {
   private helix: HelixClient;
@@ -17,6 +33,8 @@ export class Bot {
   private router: CommandRouter;
   private activePoll = { id: null as string | null };
   private chat: ChatClient | null = null;
+  private eventsub: EventSubClient | null = null;
+  private timers: Timers;
   private outgoing: ((text: string) => void)[] = [];
   private status: ((s: BotStatus) => void)[] = [];
 
@@ -44,6 +62,14 @@ export class Bot {
     this.router = new CommandRouter(
       buildBuiltins({ polls: this.polls, moderator: this.moderator, activePoll: this.activePoll, save: () => this.store.save(this.store.get()) }),
     );
+    this.timers = new Timers({
+      getConfig: () => this.store.get().timers,
+      emit: t => this.emit(t),
+      rephrase: async (seed, avoidLast) => {
+        const cfg = this.store.get().ai;
+        return personaRephrase(seed, cfg, avoidLast, makeClient(cfg.apiKey));
+      },
+    });
     this.onOutgoing(t => { void this.chat?.say(t); });
   }
 
@@ -53,6 +79,7 @@ export class Bot {
   private emitStatus(s: BotStatus): void { for (const f of this.status) f(s); }
 
   async dispatch(msg: ChatMessage): Promise<void> {
+    this.timers.noteChatLine();
     const cfg = this.store.get();
     try {
       const moderated = await this.moderator.handle(msg, cfg.moderation);
@@ -83,10 +110,32 @@ export class Bot {
     this.chat.onMessage(m => { void this.dispatch(m); });
     this.chat.onStatus(s => this.status.forEach(f => f(s)));
     await this.chat.connect();
+
+    const cfg = this.store.get();
+    if (cfg.ai.enabled && cfg.ai.reward) {
+      const reward = cfg.ai.reward;
+      this.eventsub = new EventSubClient(cfg.auth, this.helix);
+      this.eventsub.onStatus(s => this.status.forEach(f => f(s as any)));
+      this.eventsub.onRedemption(r => {
+        const aiCfg = this.store.get().ai;
+        const client = makeClient(aiCfg.apiKey);
+        void answerRedemption(r, {
+          ask: async q => sanitizeForChat(await personaAsk(q, aiCfg, client), aiCfg.maxReplyChars),
+          emit: t => this.emit(t),
+          fulfill: () => this.helix.updateRedemptionStatus(reward.id, r.id, 'FULFILLED'),
+          refund: () => this.helix.updateRedemptionStatus(reward.id, r.id, 'CANCELED'),
+        });
+      });
+      this.eventsub.connect(reward.id);
+    }
+    if (cfg.timers.enabled) this.timers.start();
   }
 
   async stop(): Promise<void> {
     await this.chat?.disconnect();
     this.chat = null;
+    this.eventsub?.disconnect();
+    this.eventsub = null;
+    this.timers.stop();
   }
 }

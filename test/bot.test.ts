@@ -4,7 +4,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ConfigStore } from '../src/core/config/store.js';
-import { Bot } from '../src/core/bot.js';
+import { Bot, answerRedemption } from '../src/core/bot.js';
 import { ChatMessage } from '../src/core/types.js';
 
 function store() {
@@ -37,4 +37,28 @@ test('dispatch persists a counter increment', async () => {
   bot.onOutgoing(() => {});
   await bot.dispatch(msg('!d'));
   assert.equal(new ConfigStore((s as any).path).load().commands[0].count, 1);
+});
+
+test('answerRedemption emits the AI reply and fulfills on success', async () => {
+  const out: string[] = [];
+  let fulfilled = false, refunded = false;
+  await answerRedemption(
+    { id: 'r', rewardId: 'rw', userInput: 'hi', userName: 'V' },
+    { ask: async q => `echo:${q}`, emit: t => out.push(t), fulfill: async () => { fulfilled = true; }, refund: async () => { refunded = true; } },
+  );
+  assert.deepEqual(out, ['echo:hi']);
+  assert.equal(fulfilled, true);
+  assert.equal(refunded, false);
+});
+
+test('answerRedemption refunds and posts a fallback on AI error', async () => {
+  const out: string[] = [];
+  let fulfilled = false, refunded = false;
+  await answerRedemption(
+    { id: 'r', rewardId: 'rw', userInput: 'hi', userName: 'V' },
+    { ask: async () => { throw new Error('rate limit'); }, emit: t => out.push(t), fulfill: async () => { fulfilled = true; }, refund: async () => { refunded = true; } },
+  );
+  assert.equal(fulfilled, false);
+  assert.equal(refunded, true);
+  assert.match(out.join(' '), /refunded/i);
 });
