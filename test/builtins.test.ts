@@ -31,3 +31,36 @@ test('!permit calls moderator.permit', async () => {
   await b['permit'].handler(c);
   assert.equal(permitted, 'SomeViewer');
 });
+
+test('!addquote stores a quote and persists', async () => {
+  let saved = 0;
+  const b = buildBuiltins({ polls: {} as any, moderator: {} as any, activePoll: { id: null }, save: () => { saved++; } });
+  const { c } = ctx('!addquote stream went great today');
+  await b['addquote'].handler(c);
+  assert.equal(c.config.quotes.length, 1);
+  assert.equal(c.config.quotes[0].text, 'stream went great today');
+  assert.equal(saved, 1);
+});
+
+test('!quote <id> returns that quote', async () => {
+  const b = buildBuiltins({ polls: {} as any, moderator: {} as any, activePoll: { id: null }, save: () => {} });
+  const { c, replies } = ctx('!quote 1');
+  c.config.quotes = [{ id: 1, text: 'hello world', addedBy: 'S', addedAt: 'now' }];
+  await b['quote'].handler({ ...c, args: ['1'] });
+  assert.match(replies.join(' '), /hello world/);
+});
+
+test('!delquote removes by id', async () => {
+  const b = buildBuiltins({ polls: {} as any, moderator: {} as any, activePoll: { id: null }, save: () => {} });
+  const { c } = ctx('!delquote 1');
+  c.config.quotes = [{ id: 1, text: 'x', addedBy: 'S', addedAt: 'now' }];
+  await b['delquote'].handler({ ...c, args: ['1'] });
+  assert.equal(c.config.quotes.length, 0);
+});
+
+test('!quote on empty list replies gracefully', async () => {
+  const b = buildBuiltins({ polls: {} as any, moderator: {} as any, activePoll: { id: null }, save: () => {} });
+  const { c, replies } = ctx('!quote');
+  await b['quote'].handler(c);
+  assert.match(replies.join(' '), /no quotes/i);
+});

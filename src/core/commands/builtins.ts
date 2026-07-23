@@ -49,5 +49,42 @@ export function buildBuiltins(deps: Deps): Record<string, { permission: Permissi
         ctx.reply(`${user} may post links for ${ctx.config.moderation.permitDurationSec}s.`);
       },
     },
+    addquote: {
+      permission: 'mod',
+      handler: ctx => {
+        const text = ctx.args.join(' ').trim();
+        if (!text) { ctx.reply('Usage: !addquote <text>'); return; }
+        const id = (ctx.config.quotes.at(-1)?.id ?? 0) + 1;
+        ctx.config.quotes.push({ id, text, addedBy: ctx.msg.displayName, addedAt: new Date().toISOString() });
+        deps.save();
+        ctx.reply(`Quote #${id} added.`);
+      },
+    },
+    quote: {
+      permission: 'everyone',
+      handler: ctx => {
+        const quotes = ctx.config.quotes;
+        if (quotes.length === 0) { ctx.reply('There are no quotes yet.'); return; }
+        let q;
+        if (ctx.args[0]) {
+          q = quotes.find(x => x.id === Number(ctx.args[0]));
+          if (!q) { ctx.reply(`No quote #${ctx.args[0]}.`); return; }
+        } else {
+          q = quotes[Math.floor(Math.random() * quotes.length)];
+        }
+        ctx.reply(`#${q.id}: ${q.text}`);
+      },
+    },
+    delquote: {
+      permission: 'mod',
+      handler: ctx => {
+        const id = Number(ctx.args[0]);
+        const i = ctx.config.quotes.findIndex(x => x.id === id);
+        if (i < 0) { ctx.reply(`No quote #${ctx.args[0]}.`); return; }
+        ctx.config.quotes.splice(i, 1);
+        deps.save();
+        ctx.reply(`Quote #${id} deleted.`);
+      },
+    },
   };
 }
