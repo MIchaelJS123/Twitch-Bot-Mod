@@ -4,7 +4,8 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ConfigStore } from '../core/config/store.js';
 import { Bot } from '../core/bot.js';
-import { authorizeUrl, exchangeCode, validate } from '../core/auth/oauth.js';
+import { authorizeUrl, exchangeCode, validate, refresh as refreshToken } from '../core/auth/oauth.js';
+import { HelixClient } from '../core/connection/helix.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REDIRECT = 'http://localhost:5123/callback';
@@ -83,6 +84,31 @@ ipcMain.handle('bot:start', async () => {
   } catch (e) { return { ok: false, error: (e as Error).message }; }
 });
 ipcMain.handle('bot:stop', async () => { try { await bot?.stop(); } finally { bot = null; } });
+ipcMain.handle('reward:create', async (_e, name: string, cost: number) => {
+  const a = store.get().auth;
+  if (!a.accessToken || !a.broadcasterId) return { ok: false, error: 'Authorize first.' };
+  const helix = new HelixClient({
+    getToken: () => store.get().auth.accessToken,
+    getClientId: () => store.get().auth.clientId,
+    getBroadcasterId: () => store.get().auth.broadcasterId,
+    onUnauthorized: async () => {
+      try {
+        const t = await refreshToken(a.clientId, a.clientSecret, a.refreshToken);
+        const next = store.get(); next.auth.accessToken = t.accessToken; next.auth.refreshToken = t.refreshToken; store.save(next);
+        return true;
+      } catch { return false; }
+    },
+  });
+  try {
+    const reward = await helix.createCustomReward(name, Number(cost), 'Type your question for the bot');
+    const next = store.get();
+    next.ai.reward = { id: reward.id, title: name, cost: Number(cost) };
+    store.save(next);
+    return { ok: true, reward: next.ai.reward };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+});
 
 app.whenReady().then(() => {
   app.setLoginItemSettings({ openAtLogin: true }); // start on boot

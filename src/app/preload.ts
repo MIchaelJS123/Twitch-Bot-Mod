@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld('api', {
   stopBot: (): Promise<void> => ipcRenderer.invoke('bot:stop'),
   beginAuth: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('auth:begin'),
   onStatus: (fn: (s: string) => void) => ipcRenderer.on('bot:status', (_e, s) => fn(s)),
+  createReward: (name: string, cost: number): Promise<{ ok: boolean; error?: string; reward?: { id: string; title: string; cost: number } }> => ipcRenderer.invoke('reward:create', name, cost),
 });
