@@ -42,6 +42,7 @@ export class EventSubClient {
   }
 
   private open(url: string): void {
+    if (this.ws) { this.ws.onclose = null; this.ws.onmessage = null; this.ws.close(); }
     const ws = this.wsFactory(url);
     this.ws = ws;
     ws.onmessage = (ev) => this.handle(String(ev.data));
@@ -53,29 +54,33 @@ export class EventSubClient {
   private handle(raw: string): void {
     let msg: any;
     try { msg = JSON.parse(raw); } catch { return; }
-    switch (msg.metadata?.message_type) {
-      case 'session_welcome':
-        void this.helix.subscribeEventSub(
-          REDEMPTION_TYPE, '1',
-          { broadcaster_user_id: this.auth.broadcasterId, reward_id: this.rewardId },
-          msg.payload.session.id,
-        );
-        break;
-      case 'session_keepalive':
-        break;
-      case 'notification': {
-        const e = msg.payload.event;
-        for (const fn of this.redemptionHandlers) {
-          fn({ id: e.id, rewardId: e.reward.id, userInput: e.user_input, userName: e.user_name });
+    try {
+      switch (msg.metadata?.message_type) {
+        case 'session_welcome':
+          this.helix.subscribeEventSub(
+            REDEMPTION_TYPE, '1',
+            { broadcaster_user_id: this.auth.broadcasterId, reward_id: this.rewardId },
+            msg.payload.session.id,
+          ).catch(() => this.status('subscribe-failed'));
+          break;
+        case 'session_keepalive':
+          break;
+        case 'notification': {
+          const e = msg.payload.event;
+          for (const fn of this.redemptionHandlers) {
+            fn({ id: e.id, rewardId: e.reward.id, userInput: e.user_input, userName: e.user_name });
+          }
+          break;
         }
-        break;
+        case 'session_reconnect':
+          this.open(msg.payload.session.reconnect_url);
+          break;
+        case 'revocation':
+          this.status('revoked');
+          break;
       }
-      case 'session_reconnect':
-        this.open(msg.payload.session.reconnect_url);
-        break;
-      case 'revocation':
-        this.status('revoked');
-        break;
+    } catch {
+      this.status('bad-message');
     }
   }
 

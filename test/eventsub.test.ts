@@ -49,3 +49,28 @@ test('keepalive is ignored (no throw, no redemption)', () => {
   sock.emit({ metadata: { message_type: 'session_keepalive' }, payload: {} });
   assert.equal(got.length, 0);
 });
+
+test('a failed EventSub subscription does not crash and reports status', async () => {
+  const sock = fakeSocket();
+  const helix = { subscribeEventSub: async () => { throw new Error('409 duplicate'); } };
+  const c = new EventSubClient(auth(), helix as any, () => sock);
+  const statuses: string[] = [];
+  c.onStatus(s => statuses.push(s));
+  c.connect('rw1');
+  sock.emit({ metadata: { message_type: 'session_welcome' }, payload: { session: { id: 'sess1' } } });
+  await new Promise(r => setImmediate(r));
+  assert.ok(statuses.includes('subscribe-failed'));
+});
+
+test('a malformed notification payload does not throw or emit', () => {
+  const sock = fakeSocket();
+  const c = new EventSubClient(auth(), { subscribeEventSub: async () => {} } as any, () => sock);
+  const got: Redemption[] = [];
+  const statuses: string[] = [];
+  c.onRedemption(r => got.push(r));
+  c.onStatus(s => statuses.push(s));
+  c.connect('rw1');
+  sock.emit({ metadata: { message_type: 'notification' }, payload: { event: { id: 'x', user_input: 'q', user_name: 'V' } } });
+  assert.equal(got.length, 0);
+  assert.ok(statuses.includes('bad-message'));
+});
