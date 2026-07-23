@@ -20,6 +20,12 @@ test('sanitizeForChat hard-caps length', () => {
   assert.equal(sanitizeForChat('abcdefgh', 5), 'abcde');
 });
 
+test('sanitizeForChat drops a partial trailing token instead of chopping a URL', () => {
+  const out = sanitizeForChat('watch this https://youtu.be/abcdefghijk', 25);
+  assert.equal(out, 'watch this');
+  assert.ok(!out.includes('https://'));
+});
+
 test('ask sends persona as system, question as user, max_tokens 150', async () => {
   const cfg = defaultConfig().ai; cfg.persona = 'be a goblin'; cfg.model = 'claude-haiku-4-5';
   const { calls, client } = fakeClient('grumble grumble');

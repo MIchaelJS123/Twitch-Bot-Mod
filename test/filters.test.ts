@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { moderate } from '../src/core/moderation/filters.js';
+import { moderate, hasBannedWord } from '../src/core/moderation/filters.js';
 import { defaultConfig, ChatMessage } from '../src/core/types.js';
 
 function msg(text: string): ChatMessage {
@@ -77,4 +77,10 @@ test('first matching filter wins (banned word before caps)', () => {
   const v = moderate(msg('STOP SHOUTING NOW'), cfg);
   assert.equal(v.ok, false);
   if (!v.ok) assert.match(v.reason, /banned word/);
+});
+
+test('hasBannedWord matches whole words case-insensitively', () => {
+  assert.equal(hasBannedWord('this is BadWord here', ['badword']), true);
+  assert.equal(hasBannedWord('i saw a bass in the lake', ['ass']), false);
+  assert.equal(hasBannedWord('all clear', []), false);
 });

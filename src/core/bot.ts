@@ -10,6 +10,7 @@ import { refresh, validate } from './auth/oauth.js';
 import { makeClient, ask as personaAsk, sanitizeForChat, rephrase as personaRephrase } from './ai/persona.js';
 import { EventSubClient, Redemption } from './connection/eventsub.js';
 import { Timers } from './timers/timers.js';
+import { hasBannedWord } from './moderation/filters.js';
 
 export type BotStatus = 'connected' | 'disconnected' | 'needs-reauth';
 
@@ -118,9 +119,14 @@ export class Bot {
       this.eventsub.onStatus(s => this.status.forEach(f => f(s as any)));
       this.eventsub.onRedemption(r => {
         const aiCfg = this.store.get().ai;
-        const client = makeClient(aiCfg.apiKey);
         void answerRedemption(r, {
-          ask: async q => sanitizeForChat(await personaAsk(q, aiCfg, client), aiCfg.maxReplyChars),
+          ask: async q => {
+            const reply = sanitizeForChat(await personaAsk(q, aiCfg, makeClient(aiCfg.apiKey)), aiCfg.maxReplyChars);
+            if (hasBannedWord(reply, this.store.get().moderation.bannedWords)) {
+              throw new Error('reply blocked by banned-word filter');
+            }
+            return reply;
+          },
           emit: t => this.emit(t),
           fulfill: () => this.helix.updateRedemptionStatus(reward.id, r.id, 'FULFILLED'),
           refund: () => this.helix.updateRedemptionStatus(reward.id, r.id, 'CANCELED'),

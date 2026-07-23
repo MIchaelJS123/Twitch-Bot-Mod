@@ -4,14 +4,18 @@ function fail(reason: string, cfg: ModerationConfig): Verdict {
   return { ok: false, reason, action: cfg.defaultAction };
 }
 
-export function checkBannedWords(msg: ChatMessage, cfg: ModerationConfig): Verdict {
-  const text = msg.message.toLowerCase();
-  for (const word of cfg.bannedWords) {
+export function hasBannedWord(text: string, bannedWords: string[]): boolean {
+  const lower = text.toLowerCase();
+  for (const word of bannedWords) {
     if (!word) continue;
     const re = new RegExp(`\\b${word.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
-    if (re.test(text)) return fail(`banned word: ${word}`, cfg);
+    if (re.test(lower)) return true;
   }
-  return { ok: true };
+  return false;
+}
+
+export function checkBannedWords(msg: ChatMessage, cfg: ModerationConfig): Verdict {
+  return hasBannedWord(msg.message, cfg.bannedWords) ? fail('banned word', cfg) : { ok: true };
 }
 
 export function checkCaps(msg: ChatMessage, cfg: ModerationConfig): Verdict {
