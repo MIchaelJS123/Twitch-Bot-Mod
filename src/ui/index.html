@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf8" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>TwitchBot</title>
+</head>
+<body>
+  <header><h1>TwitchBot</h1><span id="status" class="status">stopped</span></header>
+
+  <section>
+    <h2>Setup</h2>
+    <label>Client ID <input id="clientId" /></label>
+    <label>Client Secret <input id="clientSecret" type="password" /></label>
+    <button id="authorize">Authorize with Twitch</button>
+    <button id="start">Start Bot</button>
+    <button id="stop">Stop Bot</button>
+  </section>
+
+  <section>
+    <h2>Moderation</h2>
+    <label><input type="checkbox" id="modEnabled" /> Enabled</label>
+    <label>Caps % <input id="capsPercent" type="number" /></label>
+    <label>Max links <input id="maxLinks" type="number" /></label>
+    <label>Symbol % <input id="maxSymbolPercent" type="number" /></label>
+    <label>Banned words (comma-separated)<br /><textarea id="bannedWords"></textarea></label>
+  </section>
+
+  <section>
+    <h2>Custom Commands</h2>
+    <table id="cmdTable"><thead><tr><th>Trigger</th><th>Response</th><th>Type</th><th></th></tr></thead><tbody></tbody></table>
+    <div>
+      <input id="cTrigger" placeholder="!hello" />
+      <input id="cResponse" placeholder="hi {user}" />
+      <select id="cType"><option value="text">text</option><option value="counter">counter</option></select>
+      <button id="addCmd">Add</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Poll (native)</h2>
+    <input id="pollTitle" placeholder="Question" />
+    <input id="pollChoices" placeholder="Choice A | Choice B | Choice C" />
+    <input id="pollDuration" type="number" value="120" />
+    <button id="startPoll">Start Poll</button>
+    <p class="hint">Polls also start from chat: <code>!poll Question | A | B</code></p>
+  </section>
+
+  <section>
+    <h2>Bot Personality (AI)</h2>
+    <label><input type="checkbox" id="aiEnabled" /> Enabled</label>
+    <label>Anthropic API Key <input id="aiApiKey" type="password" /></label>
+    <label>Model
+      <select id="aiModel">
+        <option value="claude-haiku-4-5">Haiku 4.5 (cheapest)</option>
+        <option value="claude-sonnet-5">Sonnet 5</option>
+        <option value="claude-opus-4-8">Opus 4.8</option>
+      </select>
+    </label>
+    <label>Persona / rules<br /><textarea id="aiPersona"></textarea></label>
+    <label>Max reply chars <input id="aiMaxChars" type="number" /></label>
+    <h3>Channel-point reward</h3>
+    <input id="rewardName" placeholder="Ask the Bot" />
+    <input id="rewardCost" type="number" placeholder="500" />
+    <button id="createReward">Create Reward</button>
+    <span id="rewardStatus"></span>
+  </section>
+
+  <section>
+    <h2>Quotes</h2>
+    <table id="quoteTable"><thead><tr><th>#</th><th>Quote</th><th></th></tr></thead><tbody></tbody></table>
+    <input id="qText" placeholder="a memorable moment" />
+    <button id="addQuote">Add</button>
+  </section>
+
+  <section>
+    <h2>Timers</h2>
+    <label><input type="checkbox" id="timersEnabled" /> Enabled</label>
+    <label>Interval (minutes) <input id="timerInterval" type="number" /></label>
+    <label>Min chat lines between posts <input id="timerMinLines" type="number" /></label>
+    <label><input type="checkbox" id="timerRephrase" /> Rephrase with AI (unique each time)</label>
+    <label>Messages (one per line)<br /><textarea id="timerMessages"></textarea></label>
+  </section>
+
+  <button id="save" class="save">Save Settings</button>
+  <script src="app.js"></script>
+</body>
+</html>
