@@ -62,3 +62,12 @@ test('answerRedemption refunds and posts a fallback on AI error', async () => {
   assert.equal(refunded, true);
   assert.match(out.join(' '), /refunded/i);
 });
+
+test('answerRedemption never rejects even if refund also fails', async () => {
+  const out: string[] = [];
+  await assert.doesNotReject(() => answerRedemption(
+    { id: 'r', rewardId: 'rw', userInput: 'hi', userName: 'V' },
+    { ask: async () => { throw new Error('ai down'); }, emit: t => out.push(t), fulfill: async () => {}, refund: async () => { throw new Error('helix down'); } },
+  ));
+  assert.match(out.join(' '), /refunded/i);
+});

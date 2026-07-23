@@ -22,7 +22,7 @@ export async function answerRedemption(
     await deps.fulfill();
   } catch {
     deps.emit('Sorry, I could not answer that — your points were refunded.');
-    await deps.refund();
+    try { await deps.refund(); } catch { /* refund also failed; nothing more we can do */ }
   }
 }
 
@@ -124,7 +124,7 @@ export class Bot {
           emit: t => this.emit(t),
           fulfill: () => this.helix.updateRedemptionStatus(reward.id, r.id, 'FULFILLED'),
           refund: () => this.helix.updateRedemptionStatus(reward.id, r.id, 'CANCELED'),
-        });
+        }).catch(() => {});
       });
       this.eventsub.connect(reward.id);
     }
