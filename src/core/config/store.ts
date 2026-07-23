@@ -24,6 +24,9 @@ export class ConfigStore {
         moderation: { ...d.moderation, ...parsed.moderation },
         commands: parsed.commands ?? d.commands,
         polls: { ...d.polls, ...parsed.polls },
+        ai: { ...d.ai, ...parsed.ai },
+        quotes: parsed.quotes ?? d.quotes,
+        timers: { ...d.timers, ...parsed.timers },
       };
     } catch {
       renameSync(this.path, this.path + '.bak');
