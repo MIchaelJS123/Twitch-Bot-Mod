@@ -50,11 +50,40 @@ export interface ModerationConfig {
   permitDurationSec: number;   // how long a !permit lasts
 }
 
+export interface AIConfig {
+  enabled: boolean;
+  apiKey: string;
+  model: string;
+  persona: string;
+  maxReplyChars: number;
+  cooldownSec: number;
+  reward: { id: string; title: string; cost: number } | null;
+}
+
+export interface Quote {
+  id: number;
+  text: string;
+  addedBy: string;
+  addedAt: string;
+}
+
+export interface TimerConfig {
+  enabled: boolean;
+  intervalMinutes: number;
+  minChatLines: number;
+  aiRephrase: boolean;
+  messages: string[];
+  nextIndex: number;
+}
+
 export interface Config {
   auth: AuthConfig;
   moderation: ModerationConfig;
   commands: CustomCommand[];
   polls: { defaultDurationSec: number };
+  ai: AIConfig;
+  quotes: Quote[];
+  timers: TimerConfig;
 }
 
 export function defaultConfig(): Config {
@@ -72,5 +101,23 @@ export function defaultConfig(): Config {
     },
     commands: [],
     polls: { defaultDurationSec: 120 },
+    ai: {
+      enabled: false,
+      apiKey: '',
+      model: 'claude-haiku-4-5',
+      persona: 'You are a witty Twitch chat bot. Keep answers short, fun, and friendly.',
+      maxReplyChars: 200,
+      cooldownSec: 10,
+      reward: null,
+    },
+    quotes: [],
+    timers: {
+      enabled: false,
+      intervalMinutes: 10,
+      minChatLines: 5,
+      aiRephrase: false,
+      messages: [],
+      nextIndex: 0,
+    },
   };
 }
